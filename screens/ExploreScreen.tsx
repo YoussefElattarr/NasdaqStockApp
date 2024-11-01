@@ -8,52 +8,80 @@ import {
   StyleSheet,
   TouchableOpacity,
   Dimensions,
+  Image,
 } from 'react-native';
 import {useDispatch, useSelector} from 'react-redux';
-import {loadStocks, loadNextStocks} from '../redux/stocksSlice';
+import {
+  loadStocks,
+  loadNextStocks,
+  setStatus,
+  setError,
+} from '../redux/stocksSlice';
 import {AppDispatch, RootState} from '../redux/store';
 import {fetchLogo} from '../services/api';
-import {SvgUri} from 'react-native-svg';
+import {SvgUri, SvgXml} from 'react-native-svg';
+const API_KEY = 'oARPp9W0dsIizpPbqh4YpM9c0oSahtVx';
 
 const ExploreScreen = () => {
   const [query, setQuery] = useState('');
+  const [loadingMore, setLoadingMore] = useState(false);
   const dispatch = useDispatch<AppDispatch>();
   const {stocks, status, error, next_url} = useSelector(
     (state: RootState) => state.stocks,
   );
-  const [logos, setLogos] = useState<{[ticker: string]: string | null}>({});
+  const [logos, setLogos] = useState<{[composite_figi: string]: string | null}>(
+    {},
+  );
 
   useEffect(() => {
     dispatch(loadStocks(query));
   }, [query]);
 
-  const handlePress = async (ticker: string) => {
-    if (!logos[ticker]) {
-      const logoUrl = await fetchLogo(ticker);
-      console.log('logo: ' + logoUrl);
-      setLogos(prevLogos => ({...prevLogos, [ticker]: logoUrl}));
+  const handlePress = async (ticker: string, composite_figi: string) => {
+    try {
+      if (!logos[composite_figi]) {
+        const logoUri = await fetchLogo(ticker);
+        console.log('logo: ' + logoUri);
+        setLogos(prevLogos => ({...prevLogos, [composite_figi]: logoUri}));
+      }
+    } catch (error: any) {
+      dispatch(setStatus('failed'));
+      dispatch(setError(error.messsage));
     }
   };
 
-  const renderStockItem = ({item}: {item: {ticker: string; name: string}}) => {
-    // loadLogo(item.ticker);
-
-    // console.log('logooo: ' + logos[item.ticker]);
+  const renderStockItem = ({
+    item,
+  }: {
+    item: {ticker: string; name: string; composite_figi: string; logo: string};
+  }) => {
     return (
       <TouchableOpacity
-        onPress={() => handlePress(item.ticker)}
+        onPress={() => handlePress(item.ticker, item.composite_figi)}
         style={styles.stockItem}>
-        {logos[item.ticker] && logos[item.ticker] !== 'NA' ? (
-          // <Image
-          //   source={{uri: logos[item.ticker] as string}}
-          //   style={styles.logo}
-          // />
-          <SvgUri
-            style={styles.logo}
-            uri={logos[item.ticker]}
-            width="50%"
-            height="50%"
-          />
+        {logos[item.composite_figi] && logos[item.composite_figi] !== 'NA' ? (
+          (logos[item.composite_figi] as string).slice(-3) === 'svg' ? (
+            <SvgUri
+              style={styles.logo}
+              uri={logos[item.composite_figi] + `?apiKey=${API_KEY}`}
+              width="50%"
+              height="50%"
+              onError={(error: any) => {
+                console.log(error)
+              }}
+            />
+          ) : (
+            <Image
+              source={{
+                uri: (logos[item.composite_figi] +
+                  `?apiKey=${API_KEY}`) as string,
+              }}
+              style={styles.logo}
+              onError={() => {
+                console.log(error)
+              }}
+            />
+          )
         ) : (
           <View style={styles.placeholderLogo}>
             <Text style={styles.placeholderText}>{item.ticker[0]}</Text>
@@ -65,11 +93,12 @@ const ExploreScreen = () => {
     );
   };
 
-  const loadLogo = async (ticker: string) => {
-    if (!logos[ticker]) {
-      const logoUrl = await fetchLogo(ticker);
-      console.log('logo: ' + logoUrl);
-      setLogos(prevLogos => ({...prevLogos, [ticker]: logoUrl}));
+  const onEndReachedHandler = () => {
+    if (next_url && !loadingMore) {
+      setLoadingMore(true); // Set loadingMore to true to prevent duplicate requests
+      dispatch(loadNextStocks(next_url as string)).finally(() => {
+        setLoadingMore(false); // Reset loadingMore once loadNextStocks completes
+      });
     }
   };
 
@@ -85,7 +114,11 @@ const ExploreScreen = () => {
       {status === 'loading' && (
         <ActivityIndicator size="large" color="#0000ff" />
       )}
-      {status === 'failed' && <Text>Error: {error}</Text>}
+      {status === 'failed' && (
+        <View style={styles.errorBar}>
+          <Text style={styles.errorText}>Error: {error}</Text>
+        </View>
+      )}
       <FlatList
         contentContainerStyle={{
           alignItems: 'center',
@@ -94,12 +127,10 @@ const ExploreScreen = () => {
         }}
         data={stocks}
         renderItem={renderStockItem}
-        keyExtractor={item => item.cik}
+        keyExtractor={item => item.composite_figi}
         numColumns={2}
-        onEndReachedThreshold={0.9}
-        onEndReached={() => {
-          if (next_url) dispatch(loadNextStocks(next_url as string));
-        }} // Pagination handling
+        onEndReachedThreshold={0.5}
+        onEndReached={onEndReachedHandler} // Pagination handling
         // style={styles.flatList}
       />
     </View>
@@ -147,7 +178,7 @@ const styles = StyleSheet.create({
     // borderColor: '#c7c8d4',
     // borderWidth:0.5,
     width: (Dimensions.get('window').width - 50) / 2,
-    height: (Dimensions.get('window').height - 50) / 3,
+    height: (Dimensions.get('window').height - 50) / 3.5,
   },
   stockSymbol: {fontSize: 18, color: '#fff', fontWeight: 'bold'},
   stockName: {fontSize: 14, color: '#bbb'},
@@ -156,6 +187,14 @@ const styles = StyleSheet.create({
     // height: '10%',
     borderRadius: 2,
     marginBottom: 10,
+  },
+  logoPng: {
+    // width: '10%',
+    // height: '10%',
+    borderRadius: 2,
+    marginBottom: 10,
+    width: '50%',
+    height: '50%',
   },
   placeholderLogo: {
     width: 40,
@@ -167,6 +206,17 @@ const styles = StyleSheet.create({
     // marginRight: 12,
   },
   placeholderText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  errorBar: {
+    backgroundColor: '#ff4d4d',
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 10,
+    alignItems: 'center',
+  },
+  errorText: {
     color: '#fff',
     fontWeight: 'bold',
   },

@@ -1,5 +1,5 @@
 import {createSlice, createAsyncThunk} from '@reduxjs/toolkit';
-import {fetchStocks, nextBatch} from '../services/api';
+import {fetchLogo, fetchStocks, nextBatch} from '../services/api';
 import {Stock} from '../interfaces/Stock';
 
 interface StockState {
@@ -25,20 +25,24 @@ export const loadStocks = createAsyncThunk(
 );
 
 export const loadNextStocks = createAsyncThunk(
-    'stocks/nextFetch',
-    async (next_url: string = '') => {
-      console.log('here')
-      console.log(next_url)
-      const data = await nextBatch(next_url);
-      console.log(data)
-      return data;
-    },
-  );
+  'stocks/nextFetch',
+  async (next_url: string = '') => {
+    const data = await nextBatch(next_url);
+    return data;
+  },
+);
 
 const stocksSlice = createSlice({
   name: 'stocks',
   initialState,
-  reducers: {},
+  reducers: {
+    setStatus: (state, action) => {
+      state.status = action.payload;
+    },
+    setError: (state, action) => {
+      state.error = action.payload;
+    },
+  },
   extraReducers: builder => {
     builder
       .addCase(loadStocks.pending, state => {
@@ -51,15 +55,17 @@ const stocksSlice = createSlice({
       })
       .addCase(loadStocks.rejected, (state, action) => {
         state.status = 'failed';
+        state.stocks = [];
         state.error = action.error.message || 'Failed to fetch stocks';
         state.next_url = null;
+
       })
       .addCase(loadNextStocks.pending, state => {
         state.status = 'loading';
       })
       .addCase(loadNextStocks.fulfilled, (state, action) => {
         state.status = 'idle';
-        state.stocks = [...state.stocks,...action.payload.data];
+        state.stocks = [...state.stocks, ...action.payload.data];
         state.next_url = action.payload.next_url;
       })
       .addCase(loadNextStocks.rejected, (state, action) => {
@@ -70,4 +76,5 @@ const stocksSlice = createSlice({
   },
 });
 
+export const { setStatus, setError } = stocksSlice.actions;
 export default stocksSlice.reducer;

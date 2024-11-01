@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, {AxiosError} from 'axios';
 import {Stock} from '../interfaces/Stock';
 
 const API_KEY = 'oARPp9W0dsIizpPbqh4YpM9c0oSahtVx';
@@ -16,7 +16,7 @@ export const fetchStocks = async (query: string = '') => {
       data: response.data.results.map((stock: Stock) => ({
         ticker: stock.ticker,
         name: stock.name,
-        cik: stock.cik,
+        composite_figi: stock.composite_figi,
       })),
     };
     // return response.data.results.map((stock: Stock) => ({
@@ -24,6 +24,13 @@ export const fetchStocks = async (query: string = '') => {
     //   name: stock.name,
     // }));
   } catch (error) {
+    if (axios.isAxiosError(error))
+      if (error.response?.status === 429) {
+        throw new Error(
+          'Error fetching stocks due to exceeding allowed api limit per min',
+        );
+      }
+
     throw new Error('Error fetching stocks');
   }
 };
@@ -36,7 +43,7 @@ export const nextBatch = async (next_url: string) => {
       data: response.data.results.map((stock: Stock) => ({
         ticker: stock.ticker,
         name: stock.name,
-        cik: stock.cik,
+        composite_figi: stock.composite_figi,
       })),
     };
     // return response.data.results.map((stock: Stock) => ({
@@ -51,11 +58,23 @@ export const nextBatch = async (next_url: string) => {
 export const fetchLogo = async (ticker: string) => {
   try {
     const response = await axios.get(`${BASE_URL}/${ticker}?apiKey=${API_KEY}`);
-    return (
-      response.data.results?.branding?.logo_url + `?apiKey=${API_KEY}` || 'NA'
-    );
+    // if (response.data.results.branding.logo_url) {
+    //   const logo = await axios.get(
+    //     response.data.results.branding.logo_url + `?apiKey=${API_KEY}`,
+    //     {headers: {'Content-Type': 'image/png'}},
+    //   );
+    //   console.log("Please: " + logo.data)
+    //   return logo.data
+    // } else 'NA';
+
+    return response.data.results?.branding?.logo_url || 'NA';
   } catch (error) {
-    console.error(`Error fetching logo for ${ticker}`, error);
-    return null;
+    if (axios.isAxiosError(error))
+      if (error.response?.status === 429) {
+        throw new Error(
+          `Error fetching for ${ticker} due to exceeding allowed api limit per min`,
+        );
+      }
+    throw new Error(`Error fetching logo for ${ticker}`);
   }
 };

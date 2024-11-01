@@ -1,9 +1,23 @@
 <resources>
 
+<!--    &lt;!&ndash; Base application theme. &ndash;&gt;-->
+<!--    <style name="SplashTheme" parent="Theme.AppCompat.DayNight.NoActionBar">-->
+<!--    </style>-->
+<!--        &lt;!&ndash; Customize your theme here. &ndash;&gt;-->
+<!--        &lt;!&ndash; <item name="android:editTextBackground">@drawable/launch_screen</item> &ndash;&gt;-->
+<!--        <style name="SplashTheme.Launcher" parent="SplashTheme">-->
+<!--        <item name="android:windowBackground">@drawable/launch_screen</item>-->
+<!--        &lt;!&ndash; <item name="android:windowIsTranslucent">true</item> &ndash;&gt;-->
+<!--    </style>-->
     <!-- Base application theme. -->
     <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
         <!-- Customize your theme here. -->
         <item name="android:editTextBackground">@drawable/rn_edit_text_material</item>
+    </style>
+
+    <!-- Splash screen theme -->
+    <style name="SplashScreenTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:windowBackground">@drawable/splash_screen</item>
     </style>
 
 </resources>
