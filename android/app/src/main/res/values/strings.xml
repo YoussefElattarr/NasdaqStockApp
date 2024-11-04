@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">NasdaqStockApp</string>
+    <string name="developer_name">Youssef Abdalla</string>
 </resources>

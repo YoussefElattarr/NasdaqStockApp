@@ -1,18 +1,24 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {NavigationContainer} from '@react-navigation/native';
 import {createStackNavigator} from '@react-navigation/stack';
 import ExploreScreen from './screens/ExploreScreen';
 import {Provider} from 'react-redux';
-import store from './redux/store';
+import setupStore from './redux/store';
+import { Platform } from 'react-native';
+import SplashScreen from 'react-native-splash-screen';
 
 const Stack = createStackNavigator();
 
 const App = () => {
+
+  useEffect(() => {
+    if (Platform.OS === 'android') SplashScreen.hide();
+  }, []);
+
   return (
-    <Provider store={store}>
+    <Provider store={setupStore({})}>
       <NavigationContainer>
         <Stack.Navigator initialRouteName="Explore">
-          {/* <Stack.Screen name="Splash" component={SplashScreen} options={{ headerShown: false }} /> */}
           <Stack.Screen
             name="Explore"
             component={ExploreScreen}

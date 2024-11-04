@@ -23,6 +23,7 @@ package com.nasdaqstockapp
 
 import android.os.Bundle;
 import com.facebook.react.ReactActivity
+import org.devio.rn.splashscreen.SplashScreen;
 //import com.facebook.react.ReactActivityDelegate
 //import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
 //import com.facebook.react.defaults.DefaultReactActivityDelegate
@@ -31,7 +32,8 @@ import com.facebook.react.ReactActivity
 class MainActivity : ReactActivity() {
 
     override fun onCreate(savedInstance: Bundle?) {
-        setTheme(R.style.SplashScreenTheme);
+        SplashScreen.show(this, true);
+//        setTheme(R.style.SplashScreenTheme);
 //        setContentView(R.drawable.launch_screen);
 
         super.onCreate(savedInstance)

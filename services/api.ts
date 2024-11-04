@@ -1,9 +1,11 @@
 import axios, {AxiosError} from 'axios';
 import {Stock} from '../interfaces/Stock';
+import secrets from '../secrets';
 
-const API_KEY = 'oARPp9W0dsIizpPbqh4YpM9c0oSahtVx';
-const BASE_URL = 'https://api.polygon.io/v3/reference/tickers';
+const API_KEY = secrets.API_KEY;
+const BASE_URL = secrets.BASE_URL;
 
+// Fetch stock with query
 export const fetchStocks = async (query: string = '') => {
   try {
     const limit: number = 20;
@@ -19,22 +21,19 @@ export const fetchStocks = async (query: string = '') => {
         composite_figi: stock.composite_figi,
       })),
     };
-    // return response.data.results.map((stock: Stock) => ({
-    //   ticker: stock.ticker,
-    //   name: stock.name,
-    // }));
   } catch (error) {
     if (axios.isAxiosError(error))
       if (error.response?.status === 429) {
+        // Display error if reached api limit
         throw new Error(
           'Error fetching stocks due to exceeding allowed api limit per min',
         );
       }
-
     throw new Error('Error fetching stocks');
   }
 };
 
+// Fetch next batch of stocks
 export const nextBatch = async (next_url: string) => {
   try {
     const response = await axios.get(`${next_url}&apiKey=${API_KEY}`);
@@ -46,31 +45,27 @@ export const nextBatch = async (next_url: string) => {
         composite_figi: stock.composite_figi,
       })),
     };
-    // return response.data.results.map((stock: Stock) => ({
-    //   ticker: stock.ticker,
-    //   name: stock.name,
-    // }));
   } catch (error) {
+    if (axios.isAxiosError(error))
+      if (error.response?.status === 429) {
+        // Display error if reached api limit
+        throw new Error(
+          'Error fetching stocks due to exceeding allowed api limit per min',
+        );
+      }
     throw new Error('Error fetching next stocks');
   }
 };
 
+// Fetch logo for a stock
 export const fetchLogo = async (ticker: string) => {
   try {
     const response = await axios.get(`${BASE_URL}/${ticker}?apiKey=${API_KEY}`);
-    // if (response.data.results.branding.logo_url) {
-    //   const logo = await axios.get(
-    //     response.data.results.branding.logo_url + `?apiKey=${API_KEY}`,
-    //     {headers: {'Content-Type': 'image/png'}},
-    //   );
-    //   console.log("Please: " + logo.data)
-    //   return logo.data
-    // } else 'NA';
-
     return response.data.results?.branding?.logo_url || 'NA';
   } catch (error) {
     if (axios.isAxiosError(error))
       if (error.response?.status === 429) {
+        // Display error if reached api limit
         throw new Error(
           `Error fetching for ${ticker} due to exceeding allowed api limit per min`,
         );

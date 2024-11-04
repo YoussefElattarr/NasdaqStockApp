@@ -2,6 +2,7 @@ import {createSlice, createAsyncThunk} from '@reduxjs/toolkit';
 import {fetchLogo, fetchStocks, nextBatch} from '../services/api';
 import {Stock} from '../interfaces/Stock';
 
+// Stock state interface
 interface StockState {
   stocks: Stock[];
   status: 'idle' | 'loading' | 'failed';
@@ -9,6 +10,7 @@ interface StockState {
   next_url: string | null;
 }
 
+// Initial state
 const initialState: StockState = {
   stocks: [],
   status: 'idle',
@@ -16,6 +18,7 @@ const initialState: StockState = {
   next_url: null,
 };
 
+//Load stocks with query
 export const loadStocks = createAsyncThunk(
   'stocks/fetch',
   async (query: string = '') => {
@@ -24,6 +27,7 @@ export const loadStocks = createAsyncThunk(
   },
 );
 
+//Load next batch of stocks
 export const loadNextStocks = createAsyncThunk(
   'stocks/nextFetch',
   async (next_url: string = '') => {

@@ -19,12 +19,15 @@ import {
 } from '../redux/stocksSlice';
 import {AppDispatch, RootState} from '../redux/store';
 import {fetchLogo} from '../services/api';
-import {SvgUri, SvgXml} from 'react-native-svg';
-const API_KEY = 'oARPp9W0dsIizpPbqh4YpM9c0oSahtVx';
+import {SvgUri} from 'react-native-svg';
+import secrets from '../secrets';
+
+const API_KEY = secrets.API_KEY;
 
 const ExploreScreen = () => {
   const [query, setQuery] = useState('');
   const [loadingMore, setLoadingMore] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const dispatch = useDispatch<AppDispatch>();
   const {stocks, status, error, next_url} = useSelector(
     (state: RootState) => state.stocks,
@@ -33,15 +36,18 @@ const ExploreScreen = () => {
     {},
   );
 
+  //Update stocks when refreshing or when query is inputed
   useEffect(() => {
     dispatch(loadStocks(query));
-  }, [query]);
+    setRefreshing(false);
+  }, [query, refreshing]);
 
+  //Handle press on stock item to show logo
   const handlePress = async (ticker: string, composite_figi: string) => {
     try {
+      //If we don't already have a link to the logo
       if (!logos[composite_figi]) {
         const logoUri = await fetchLogo(ticker);
-        console.log('logo: ' + logoUri);
         setLogos(prevLogos => ({...prevLogos, [composite_figi]: logoUri}));
       }
     } catch (error: any) {
@@ -50,27 +56,40 @@ const ExploreScreen = () => {
     }
   };
 
+  //Stock Item
   const renderStockItem = ({
     item,
   }: {
     item: {ticker: string; name: string; composite_figi: string; logo: string};
   }) => {
     return (
+      // Touchable to be able to touch to display logo
       <TouchableOpacity
+        accessibilityLabel="stockItem"
         onPress={() => handlePress(item.ticker, item.composite_figi)}
-        style={styles.stockItem}>
+        style={[
+          styles.stockItem,
+          {
+            width: (Dimensions.get('window').width - 50) / 2,
+            height: (Dimensions.get('window').width - 50) / 2,
+          },
+        ]}>
+        {/* If Logo exists and not "NA", display it*/}
         {logos[item.composite_figi] && logos[item.composite_figi] !== 'NA' ? (
+          // Check either the image is svg or png
           (logos[item.composite_figi] as string).slice(-3) === 'svg' ? (
+            // If svg
             <SvgUri
               style={styles.logo}
               uri={logos[item.composite_figi] + `?apiKey=${API_KEY}`}
               width="50%"
               height="50%"
               onError={(error: any) => {
-                console.log(error)
+                console.log(error);
               }}
             />
           ) : (
+            // If png
             <Image
               source={{
                 uri: (logos[item.composite_figi] +
@@ -78,47 +97,68 @@ const ExploreScreen = () => {
               }}
               style={styles.logo}
               onError={() => {
-                console.log(error)
+                console.log(error);
               }}
             />
           )
         ) : (
+          // If logo is not available, show initials
           <View style={styles.placeholderLogo}>
-            <Text style={styles.placeholderText}>{item.ticker[0]}</Text>
+            <Text
+              accessibilityLabel="stockItemlogoInitials"
+              style={styles.placeholderText}>
+              {item.ticker[0]}
+            </Text>
           </View>
         )}
-        <Text style={styles.stockSymbol}>{item.ticker}</Text>
-        <Text style={styles.stockName}>{item.name.slice(0, 15)}</Text>
+        <Text accessibilityLabel="stockItemTicker" style={styles.stockSymbol}>
+          {item.ticker}
+        </Text>
+        <Text accessibilityLabel="stockItemName" style={styles.stockName}>
+          {item.name.slice(0, 15)}
+        </Text>
       </TouchableOpacity>
     );
   };
 
+  // Handle fetching next stocks batch
   const onEndReachedHandler = () => {
     if (next_url && !loadingMore) {
       setLoadingMore(true); // Set loadingMore to true to prevent duplicate requests
       dispatch(loadNextStocks(next_url as string)).finally(() => {
-        setLoadingMore(false); // Reset loadingMore once loadNextStocks completes
+        setLoadingMore(false);
       });
     }
   };
 
   return (
     <View style={styles.container}>
+      {/* Search box */}
       <TextInput
+        accessibilityLabel="searchInput"
         style={styles.searchInput}
         placeholder="Search for stocks"
         placeholderTextColor="#53566a"
         value={query}
         onChangeText={setQuery}
       />
+      {/* Show loading indicator if loading stocks */}
       {status === 'loading' && (
-        <ActivityIndicator size="large" color="#0000ff" />
+        <ActivityIndicator
+          accessibilityLabel="loading"
+          size="large"
+          color="#0000ff"
+        />
       )}
+      {/* Show error message if failure */}
       {status === 'failed' && (
         <View style={styles.errorBar}>
-          <Text style={styles.errorText}>Error: {error}</Text>
+          <Text accessibilityLabel="errorMessage" style={styles.errorText}>
+            Error: {error && error !== ''? error: "Something went wrong"}
+          </Text>
         </View>
       )}
+      {/* Flatlist to display all stocks */}
       <FlatList
         contentContainerStyle={{
           alignItems: 'center',
@@ -131,7 +171,11 @@ const ExploreScreen = () => {
         numColumns={2}
         onEndReachedThreshold={0.5}
         onEndReached={onEndReachedHandler} // Pagination handling
-        // style={styles.flatList}
+        onRefresh={() => {
+          setRefreshing(true);
+        }}
+        refreshing={refreshing}
+        accessibilityLabel="flatlist"
       />
     </View>
   );
@@ -146,51 +190,30 @@ const styles = StyleSheet.create({
   searchInput: {
     backgroundColor: '#23263a',
     borderRadius: 20,
-    // borderColor: "#c7c8d4",
-    // borderWidth: 1,
     padding: 10,
     color: '#fff',
     marginBottom: 16,
   },
   flatList: {
     padding: 10,
-    // flex:1,  // Flatlist column
     flexDirection: 'row',
     flexWrap: 'wrap',
   },
   stockItem: {
     backgroundColor: '#23263a',
-    // borderRadius: 8,
-    // padding: 16,
-    // marginVertical: 8,
-    // marginRight: 8,
-    // alignItems: 'center',
-    // justifyContent: 'center',
-    // flex: 1,
-    // margin: 1,
-    // width: Dimensions.get('window').width / 2.3
-    // flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 10,
     margin: 5,
     borderRadius: 15,
-    // borderColor: '#c7c8d4',
-    // borderWidth:0.5,
-    width: (Dimensions.get('window').width - 50) / 2,
-    height: (Dimensions.get('window').height - 50) / 3.5,
   },
   stockSymbol: {fontSize: 18, color: '#fff', fontWeight: 'bold'},
   stockName: {fontSize: 14, color: '#bbb'},
   logo: {
-    // width: '10%',
-    // height: '10%',
     borderRadius: 2,
     marginBottom: 10,
   },
   logoPng: {
-    // width: '10%',
-    // height: '10%',
     borderRadius: 2,
     marginBottom: 10,
     width: '50%',
@@ -203,7 +226,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#333',
     alignItems: 'center',
     justifyContent: 'center',
-    // marginRight: 12,
   },
   placeholderText: {
     color: '#fff',

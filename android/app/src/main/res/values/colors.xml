@@ -2,4 +2,5 @@
 
 <resources>
     <color name="splash_background">#1f2130</color>
+    <color name="primary_dark">#1f2130</color>
 </resources>
